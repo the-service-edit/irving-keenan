@@ -1,6 +1,6 @@
 /* Irving & Keenan, public site
    Design language: calm editorial (Stayli reference) × Mount Lawley heritage.
-   Brand colours verified from the live site: red #B12025, gold #D4A75B. */
+   Brand colours verified from the live site: red #B12025, gold #D5A855. */
 
 :root {
   --paper: #F7F4EE;
@@ -12,7 +12,7 @@
   --line: #E3DCD0;
   --brand: #B12025;          /* verified */
   --brand-deep: #8C191D;
-  --gold: #D4A75B;           /* verified, decorative only */
+  --gold: #D5A855;           /* verified, decorative only */
   --gold-text: #7F6129;      /* AA on paper */
   --focus: #1F4FD1;
   --radius: 18px;
@@ -573,8 +573,28 @@ a:hover { color: var(--brand); }
 .pm-band h2, .panel-apply h2, .lightbox h2 { color: #fff; }
 .pm-band .label, .panel-apply .label { color: var(--gold); }
 .pm-band .ticks .i { color: var(--gold); }
-.pm-band .ticks li { border-bottom-color: rgba(212, 167, 91, .28); }
+.pm-band .ticks li { border-bottom-color: rgba(213, 168, 85, .28); }
 .pm-band .btn-brand, .panel-apply .btn-brand { background: var(--brand); color: #fff; }
 .pm-band .btn-brand:hover, .panel-apply .btn-brand:hover { background: var(--brand-deep); color: #fff; }
 .panel-apply { border-top: 3px solid var(--gold); }
 .panel-apply .muted { color: #CFC8BD; }
+
+/* Exact logo gold (#D5A855, sampled from the logo file). Gold text on cream is only 2:1 contrast, so on light
+   backgrounds gold is used as a fill (with black text) or for rules and icons, never as small text. */
+.label, .eyebrow:not(.serif-accent) { display: inline-block; background: var(--gold); color: var(--ink); padding: 5px 12px 4px; border-radius: 999px; font-size: 12px; margin-bottom: 18px; }
+.split-intro > .label { justify-self: start; align-self: start; }
+.pm-band .label, .panel-apply .label { background: var(--gold); color: var(--ink); }
+.card-type, .app-count { color: var(--muted); }
+.steps-list span { color: var(--ink); font-style: normal; font-family: var(--caps); display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--gold); font-size: 13px; }
+.feature-list .i, .ticks .i, .specs .i, .apply-facts .i, .contact-list dt .i, .link-arrow .i { color: var(--gold); }
+.pathway-icon { background: var(--gold); color: var(--ink); }
+.stats { border-top: 2px solid var(--gold); }
+.link-arrow { border-bottom: 2px solid var(--gold); }
+.primary-nav a[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--gold); }
+.site-footer { border-top: 4px solid var(--gold); }
+.suburbs li { border-color: var(--gold); }
+.panel-apply { border-top-color: var(--gold); }
+.app-progress-bar, .upload-progress div { background: var(--gold); }
+.app-steps li a[aria-current="step"] { box-shadow: inset 3px 0 0 var(--gold), var(--shadow); }
+.is-done .app-step-n { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+.footer-h { color: var(--ink); }
