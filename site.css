@@ -598,3 +598,77 @@ a:hover { color: var(--brand); }
 .app-steps li a[aria-current="step"] { box-shadow: inset 3px 0 0 var(--gold), var(--shadow); }
 .is-done .app-step-n { background: var(--gold); border-color: var(--gold); color: var(--ink); }
 .footer-h { color: var(--ink); }
+
+/* ───── Home: quick actions + immersive mobile hero (client feedback 17 Sep: mobile not engaging) ───── */
+.preview-note { position: fixed; right: 10px; top: calc(var(--header-h) + 8px); z-index: 60; background: rgba(31, 28, 26, .72); color: #fff; padding: 3px 10px; border-radius: 999px; font: 11px/1.6 system-ui, sans-serif; letter-spacing: .04em; pointer-events: none; }
+.hero-apply { display: none; }
+.quick-actions { display: none; }
+.quick-actions ul { list-style: none; margin: 0; padding: 0 var(--gutter); display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.quick-actions ul::-webkit-scrollbar { display: none; }
+.quick-actions li { scroll-snap-align: start; flex: none; }
+.quick-actions a { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 18px; width: 118px; height: 104px; padding: 14px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); text-decoration: none; font-weight: 600; font-size: 15px; color: var(--ink); }
+.quick-actions a .i { width: 26px; height: 26px; padding: 4px; box-sizing: content-box; border-radius: 10px; background: var(--gold); color: var(--ink); }
+.quick-actions li:nth-child(3) a { background: var(--ink); color: #fff; }
+
+@media (max-width: 700px) {
+  .is-home .site-header { background: transparent; border-color: transparent; }
+  .is-home .site-header .brand { background: rgba(247, 244, 238, .94); padding: 6px 10px; border-radius: 12px; }
+  .is-home .site-header.is-scrolled .brand { background: transparent; padding: 0; }
+  .is-home .site-header .menu-toggle { background: rgba(247, 244, 238, .94); }
+  .hero { min-height: 100svh; display: flex; flex-direction: column; justify-content: flex-end; background: #1F1C1A; }
+  .hero::after { display: none; }
+  .hero-media { position: absolute; inset: 0; margin: 0; }
+  .hero-media img { width: 100%; height: 100%; max-height: none; min-height: 0; object-fit: cover; object-position: 38% 60%; -webkit-mask-image: none; mask-image: none; }
+  .hero::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(20, 17, 15, .35) 0%, rgba(20, 17, 15, 0) 22%, rgba(20, 17, 15, .15) 45%, rgba(20, 17, 15, .82) 78%, rgba(20, 17, 15, .92) 100%); }
+  .hero-content { text-align: left; align-items: flex-start; padding-top: 0; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+  .hero .eyebrow.serif-accent { color: var(--gold); font-size: 17px; margin-bottom: 6px; }
+  .hero-title { color: #fff; font-size: clamp(38px, 11vw, 48px); line-height: 1.02; margin: 0 0 14px; text-align: left; }
+  .hero-lede { color: rgba(255, 255, 255, .86); font-size: 16px; margin: 0; text-align: left; }
+  .hero .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 22px; justify-content: stretch; }
+  .hero .actions .btn { flex: none; width: 100%; padding-left: 12px; padding-right: 12px; }
+  .hero .actions .btn-dark { background: #fff; color: var(--ink); }
+  .hero .actions .btn-glass { display: none; }
+  .hero-apply { display: inline-flex; }
+  .quick-actions { display: block; margin: -22px 0 0; position: relative; z-index: 3; }
+  .intro { padding-top: 48px; }
+  /* Featured homes become a swipeable strip */
+  .feature-grid { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter) 8px; scrollbar-width: none; }
+  .feature-grid::-webkit-scrollbar { display: none; }
+  .feature-grid .card { flex: 0 0 82%; scroll-snap-align: start; }
+  .feature-grid .card-media, .feature-grid .card-lg .card-media { aspect-ratio: 4 / 5; }
+  .featured { order: -1; }
+  .section-head-links { gap: 16px; }
+  .statement { font-size: 24px; }
+  .stats dd { font-size: 30px; }
+  .people-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 14px; margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter); scrollbar-width: none; }
+  .people-grid::-webkit-scrollbar { display: none; }
+  .people-grid .person { flex: 0 0 62%; scroll-snap-align: start; }
+}
+@media (prefers-reduced-motion: no-preference) and (max-width: 700px) {
+  .hero-media img { animation: kenburns 18s ease-out both; }
+  @keyframes kenburns { from { transform: scale(1.12); } to { transform: scale(1); } }
+}
+
+/* Labels v3 (client: gold pill "hideous"). Quiet letter-spaced caps in ink, with a small gold diamond. */
+.label, .eyebrow:not(.serif-accent) { display: inline-flex; align-items: center; gap: 10px; background: none; padding: 0; border-radius: 0; color: var(--ink-2); font-family: var(--caps); font-size: 12.5px; font-weight: 600; letter-spacing: .16em; margin-bottom: 16px; }
+.label::before, .eyebrow:not(.serif-accent)::before { content: ''; display: inline-block; flex: none; width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); margin: 0; }
+.pm-band .label, .panel-apply .label { background: none; color: var(--gold); }
+@media (max-width: 700px) {
+  .hero-media { z-index: 0; }
+  .hero::before { background: linear-gradient(180deg, rgba(20, 17, 15, .30) 0%, rgba(20, 17, 15, 0) 18%, rgba(20, 17, 15, .10) 34%, rgba(20, 17, 15, .72) 56%, rgba(20, 17, 15, .92) 76%, rgba(20, 17, 15, .96) 100%); }
+  .is-home main { display: flex; flex-direction: column; }
+  .is-home .hero { order: -3; }
+  .is-home .quick-actions { order: -2; }
+  .is-home .featured { order: -1; padding-top: 44px; }
+  .quick-actions a { width: 132px; font-size: 14.5px; white-space: nowrap; }
+}
+
+/* Hero CTAs v2 (client 17 Sep: separate sale and rent buttons) */
+.hero .actions .hero-rent { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); }
+.hero .actions .hero-rent:hover { background: var(--ink); color: #fff; }
+@media (max-width: 700px) {
+  .hero .actions .hero-sale { background: #fff; color: var(--ink); }
+  .hero .actions .hero-rent { background: rgba(255, 255, 255, .08); color: #fff; border-color: rgba(255, 255, 255, .85); }
+  .hero .actions .hero-story { display: none; }
+  .hero .actions .hero-apply { grid-column: 1 / -1; }
+}
