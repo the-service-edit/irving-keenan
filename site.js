@@ -1,21 +1,27 @@
 (() => {
   document.documentElement.classList.add('js');
   const header = document.querySelector('[data-header]');
+  const toggle = document.querySelector('[data-menu-toggle]');
   if (header) {
-    const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 24);
+    // Hysteresis: the sticky header shrinks when scrolled, which shifts the page by ~14px. A single threshold
+    // made the header flicker (and content jump) when the page sat near it, so it switches on/off at different points.
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y > 64) header.classList.add('is-scrolled');
+      else if (y < 8 && !(toggle && toggle.getAttribute('aria-expanded') === 'true')) header.classList.remove('is-scrolled');
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
   }
 
   // Mobile menu
-  const toggle = document.querySelector('[data-menu-toggle]');
   const menu = document.querySelector('[data-mobile-menu]');
   if (toggle && menu) {
     const setOpen = (open) => {
       toggle.setAttribute('aria-expanded', String(open));
       menu.hidden = !open;
       document.body.style.overflow = open ? 'hidden' : '';
-      header.classList.toggle('is-scrolled', open || window.scrollY > 24);
+      header.classList.toggle('is-scrolled', open || window.scrollY > 64);
       if (open) menu.querySelector('a')?.focus();
     };
     toggle.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));

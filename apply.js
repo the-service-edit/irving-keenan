@@ -22,6 +22,24 @@
   const optVal = (o) => (Array.isArray(o) ? o[0] : o);
   const optLabel = (o) => (Array.isArray(o) ? o[1] : o);
   const fid = (name) => `q-${name.replace(/[^\w-]/g, '-')}`;
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const today = () => window.IKDate.perthToday();
+  const auDate = (v) => window.IKDate.toAU(v);
+  const auMonth = (v) => (/^\d{4}-\d{2}$/.test(v || '') ? `${MONTHS[Number(v.slice(5)) - 1]} ${v.slice(0, 4)}` : v);
+  // Mirrors dateBounds() in appSchema.js. The server re-validates every date.
+  function addDays(iso, n) { const [y, m, d] = iso.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, d + n)); return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`; }
+  function addYears(iso, n) { const [y, m, d] = iso.split('-').map(Number); const dim = new Date(Date.UTC(y + n, m, 0)).getUTCDate(); return `${y + n}-${String(m).padStart(2, '0')}-${String(Math.min(d, dim)).padStart(2, '0')}`; }
+  function dateBounds(f) {
+    const t = today();
+    let min = f.minYear ? `${f.minYear}-01-01` : ''; let max = '';
+    if (f.past || f.adult) max = t;
+    if (f.adult) max = addYears(t, -18);
+    if (f.future) min = t;
+    if (f.maxDaysAgo != null) min = addDays(t, -f.maxDaysAgo);
+    if (f.maxDaysAhead != null) max = addDays(t, f.maxDaysAhead);
+    return { min, max };
+  }
+  const ICON_CAL = '<svg class="i" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
 
   async function api(method, url, body, isForm = false) {
     if (window.IK_DEMO) {
@@ -169,16 +187,48 @@ ${lead ? '<li>Names and emails for any other adults who will live with you</li>'
 <div data-list-items>${items.map((item, i) => listItemScoped(f, item, i)).join('')}</div>
 <button type="button" class="btn btn-ghost btn-sm" data-add-item ${items.length >= f.max ? 'hidden' : ''}>+ Add ${esc(f.itemLabel.toLowerCase())}</button></div>`;
     }
+    if (f.type === 'date') {
+      const { min, max } = dateBounds(f);
+      const hint = `<p class="help help-fmt" id="${id}-fmt">Format: DD/MM/YYYY</p>`;
+      return `<div class="${cls}"${whenAttr}${hidden}><label for="${id}">${esc(f.label)}${optional}</label>${help}${hint}
+<div class="datefield" data-datefield data-min="${min}" data-max="${max}" data-label="${esc(f.label.toLowerCase())}">
+<input type="text" id="${id}" inputmode="numeric" maxlength="10" placeholder="DD/MM/YYYY" autocomplete="${f.autocomplete || 'off'}" value="${esc(auDate(value ?? ''))}" data-date-text${req} aria-describedby="${f.help ? `${id}-help ` : ''}${id}-fmt ${id}-err">
+<button type="button" class="datefield-btn" data-date-toggle aria-haspopup="dialog" aria-expanded="false" aria-controls="${id}-dp"><span class="visually-hidden">Choose ${esc(f.label.toLowerCase())} from calendar</span>${ICON_CAL}</button>
+<input type="hidden" name="${esc(name)}" data-name="${esc(name)}" data-type="date" data-date-value value="${esc(value ?? '')}">
+</div>${err}</div>`;
+    }
+    if (f.type === 'month') {
+      const [vy = '', vm = ''] = String(value ?? '').split('-');
+      const thisYear = Number(today().slice(0, 4));
+      const years = []; for (let y = thisYear + (f.notFuture ? 0 : 5); y >= (f.minYear || thisYear - 80); y -= 1) years.push(y);
+      return `<fieldset class="${cls} monthfield" id="${id}" data-month${whenAttr}${hidden} aria-describedby="${describedBy(f, id)}">
+<legend>${esc(f.label)}${optional}</legend>${help}
+<div class="month-selects">
+<label class="visually-hidden" for="${id}-first">Month</label><select id="${id}-first" data-month-part="m"${req}><option value="">Month</option>${MONTHS.map((mn, i) => { const v = String(i + 1).padStart(2, '0'); return `<option value="${v}" ${vm === v ? 'selected' : ''}>${mn}</option>`; }).join('')}</select>
+<label class="visually-hidden" for="${id}-y">Year</label><select id="${id}-y" data-month-part="y"${req}><option value="">Year</option>${years.map((y) => `<option value="${y}" ${vy === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select>
+</div>
+<input type="hidden" name="${esc(name)}" data-name="${esc(name)}" data-type="month" value="${esc(value ?? '')}">${err}</fieldset>`;
+    }
     let control;
-    const common = `id="${id}" name="${esc(name)}" data-name="${esc(name)}" data-type="${f.type}"${req}${locked} aria-describedby="${describedBy(f, id)}"${f.autocomplete ? ` autocomplete="${f.autocomplete}"` : ''}`;
+    const common = `id="${id}" name=""${esc(name)}" data-name="${esc(name)}" data-type="${f.type}"${req}${locked} aria-describedby="${describedBy(f, id)}"${f.autocomplete ? ` autocomplete="${f.autocomplete}"` : ''}`;
     if (f.type === 'select') control = `<select ${common}><option value="">Choose…</option>${f.options.map((o) => `<option value="${esc(optVal(o))}" ${String(value ?? '') === optVal(o) ? 'selected' : ''}>${esc(optLabel(o))}</option>`).join('')}</select>`;
     else if (f.type === 'textarea') control = `<textarea ${common} rows="4" maxlength="${f.max || 1000}">${esc(value ?? '')}</textarea>`;
     else {
-      const t = { money: 'text', number: 'number', tel: 'tel', email: 'email', date: 'date', month: 'month' }[f.type] || 'text';
+      const t = { money: 'text', number: 'number', tel: 'tel', email: 'email' }[f.type] || 'text';
       const extra = f.type === 'money' ? ' inputmode="decimal"' : f.type === 'number' ? ` inputmode="numeric" min="${f.min ?? ''}" max="${f.max ?? ''}"` : f.inputmode ? ` inputmode="${f.inputmode}"` : '';
       control = `${f.type === 'money' ? '<div class="prefix"><span aria-hidden="true">$</span>' : ''}<input type="${t}" ${common} value="${esc(value ?? '')}"${f.max && t === 'text' ? ` maxlength="${f.max}"` : ''}${extra}>${f.type === 'money' ? '</div>' : ''}`;
     }
     return `<div class="${cls}"${whenAttr}${hidden}><label for="${id}">${esc(f.label)}${optional}${f.locked ? ` <span class="optional">${ICON.lock} from your link</span>` : ''}</label>${help}${control}${err}</div>`;
+  }
+
+  function enhanceDates(scope) {
+    scope.querySelectorAll('[data-datefield]').forEach((w) => window.IKDate.enhance(w));
+    scope.querySelectorAll('[data-month]').forEach((fs) => {
+      const [m, y] = [fs.querySelector('[data-month-part="m"]'), fs.querySelector('[data-month-part="y"]')];
+      const store = fs.querySelector('input[type=hidden]');
+      const sync = () => { store.value = m.value || y.value ? `${y.value}-${m.value}` : ''; };
+      m.addEventListener('change', sync); y.addEventListener('change', sync);
+    });
   }
 
   // Build list item fields with names scoped to the list path.
@@ -264,9 +314,13 @@ ${lead ? '<li>Names and emails for any other adults who will live with you</li>'
     S.dirty = false;
     const data = readForm(form, step);
     S.saving = api('PATCH', `/api/apply/step/${step.id}`, { data }).then((r) => {
-      if (r.ok) { S.savedAt = new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }); setSaveStatus(`Saved ${S.savedAt}`); }
-      else setSaveStatus(r.data.error || 'Couldn’t save. Check your connection.');
-    }).catch(() => setSaveStatus('Couldn’t save. Check your connection.'));
+      if (r.ok) {
+        // Keep the on-screen copy in step with what was saved, so moving between steps never shows stale answers.
+        mergeLocal(step, data);
+        S.savedAt = new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', timeZone: 'Australia/Perth' });
+        setSaveStatus(`Saved ${S.savedAt}`);
+      } else { S.dirty = true; setSaveStatus(r.data.error || 'Couldn’t save. Check your connection.'); }
+    }).catch(() => { S.dirty = true; setSaveStatus('Couldn’t save. Check your connection.'); });
     await S.saving;
   }
   let flushTarget = null;
@@ -297,7 +351,7 @@ ${lead ? '<li>Names and emails for any other adults who will live with you</li>'
     const data = step.scope === 'application' ? (S.state.application.tenancy || {}) : S.state.me.data;
     const listing = S.state.application.listing;
     let extra = '';
-    if (id === 'property') extra = `<div class="app-summary-card"><p><strong>${esc(listing.address)}</strong></p><p class="muted">Rent ${money(listing.rentWeekly)} per week, as advertised${listing.availableFrom ? ` · Available ${new Date(`${listing.availableFrom}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}</p><p class="small muted">Under WA law we can’t invite or accept offers above the advertised rent.</p></div>`;
+    if (id === 'property') extra = `<div class="app-summary-card"><p><strong>${esc(listing.address)}</strong></p><p class="muted">Rent ${money(listing.rentWeekly)} per week, as advertised${listing.availableFrom ? ` · Available ${auDate(listing.availableFrom)}` : ''}</p><p class="small muted">Under WA law we can’t invite or accept offers above the advertised rent.</p></div>`;
     shell(`<form class="app-card form" novalidate data-step-form>
 ${stepHeader(step)}
 <div class="error-summary" role="alert" tabindex="-1" data-error-summary hidden></div>
@@ -307,6 +361,7 @@ ${navButtons(step)}
 </form>`);
     const form = $('[data-step-form]');
     flushTarget = { form, step };
+    enhanceDates(form);
     form.addEventListener('input', () => { applyVisibility(form, step); queueSave(form, step); });
     form.addEventListener('change', () => { applyVisibility(form, step); queueSave(form, step); });
     // List add/remove
@@ -348,7 +403,7 @@ ${navButtons(step)}
       if (!r.ok) return showErrors(form, { _: r.data.error || 'Something went wrong.' });
       mergeLocal(step, payload);
       S.state.progress = r.data.progress;
-      S.savedAt = new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
+      S.savedAt = new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit', timeZone: 'Australia/Perth' });
       go(nextId(step) || 'review');
     });
     $('.app-h1').focus();
@@ -462,7 +517,7 @@ ${stepHeader(step)}
     return `<section class="doc-cat" aria-labelledby="dc-${c.id}" id="q-doc-${c.id}" tabindex="-1">
 <div class="doc-cat-head"><h2 class="h4" id="dc-${c.id}">${esc(c.label)}${c.required || (c.id === 'bond' && bondNeeded) ? '' : ''}</h2>${list.length ? `<span class="status-pill st-complete">${ICON.check} Added</span>` : c.required || c.id === 'bond' ? '<span class="status-pill">Required</span>' : ''}</div>
 ${c.help ? `<p class="muted small">${esc(c.help)}</p>` : ''}
-<ul class="doc-list">${list.map((d) => `<li>${ICON.doc}<span class="doc-name">${esc(d.name)}</span><span class="muted small">${Math.max(1, Math.round(d.size / 1024))} KB</span><button class="btn-link small" type="button" data-del="${d.id}" aria-label="Remove ${esc(d.name)}">Remove</button></li>`).join('')}</ul>
+<ul class="doc-list">${list.map((d) => `<li>${ICON.doc}<span class="doc-name">${esc(d.name)}</span><span class="muted small">${Math.max(1, Math.round(d.size / 1024))} KB</span><label class="btn-link small doc-replace">Replace<span class="visually-hidden"> ${esc(d.name)}</span><input type="file" class="visually-hidden" accept=".pdf,.jpg,.jpeg,.png,.heic,application/pdf,image/jpeg,image/png,image/heic" data-replace="${d.id}" data-cat="${c.id}"></label><button class="btn-link small" type="button" data-del="${d.id}" aria-label="Remove ${esc(d.name)}">Remove</button></li>`).join('')}</ul>
 <label class="dropzone" data-drop="${c.id}"><input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,application/pdf,image/jpeg,image/png,image/heic" data-file="${c.id}" aria-describedby="up-${c.id}-err">
 ${ICON.upload}<span><strong>${list.length ? 'Add another file' : 'Choose a file'}</strong> or take a photo<br><span class="muted small">PDF, JPG, PNG or HEIC · up to ${mb}MB</span></span></label>
 <div class="upload-progress" data-progress="${c.id}" hidden><div></div></div>
@@ -472,6 +527,7 @@ ${ICON.upload}<span><strong>${list.length ? 'Add another file' : 'Choose a file'
 <form data-step-form novalidate><div class="error-summary" role="alert" tabindex="-1" data-error-summary hidden></div>${navButtons(step, { continueLabel: 'Continue' })}</form>
 </div>`);
     root.querySelectorAll('[data-file]').forEach((input) => input.addEventListener('change', () => { if (input.files[0]) upload(step, input.dataset.file, input.files[0]); }));
+    root.querySelectorAll('[data-replace]').forEach((input) => input.addEventListener('change', () => { if (input.files[0]) upload(step, input.dataset.cat, input.files[0], input.dataset.replace); }));
     root.querySelectorAll('[data-drop]').forEach((zone) => {
       zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('is-over'); });
       zone.addEventListener('dragleave', () => zone.classList.remove('is-over'));
@@ -485,16 +541,16 @@ ${ICON.upload}<span><strong>${list.length ? 'Add another file' : 'Choose a file'
     $('.app-h1').focus();
   }
 
-  function upload(step, category, file) {
+  function upload(step, category, file, replaces = null) {
     const st = S.state;
     const err = $(`#up-${category}-err`);
     const bar = $(`[data-progress="${category}"]`);
     err.hidden = true;
     if (window.IK_DEMO) {
       bar.hidden = false; bar.firstElementChild.style.width = '60%';
-      window.IK_DEMO.upload(category, file).then(({ status, data }) => {
+      window.IK_DEMO.upload(category, file, replaces).then(({ status, data }) => {
         bar.hidden = true;
-        if (status === 201) { st.me.documents.push(data.document); renderDocuments(step); }
+        if (status === 201) { st.me.documents = st.me.documents.filter((d) => d.id !== replaces); st.me.documents.push(data.document); renderDocuments(step); }
         else { err.textContent = data.error; err.hidden = false; }
       });
       return;
@@ -504,6 +560,7 @@ ${ICON.upload}<span><strong>${list.length ? 'Add another file' : 'Choose a file'
     if (file.size > st.upload.maxBytes) { err.textContent = `That file is larger than ${st.upload.maxBytes / 1048576}MB. Try a smaller photo or a compressed PDF.`; err.hidden = false; return; }
     const fd = new FormData();
     fd.append('category', category);
+    if (replaces) fd.append('replaces', replaces);
     fd.append('file', file);
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/apply/documents');
@@ -514,10 +571,11 @@ ${ICON.upload}<span><strong>${list.length ? 'Add another file' : 'Choose a file'
       bar.hidden = true;
       let data = {}; try { data = JSON.parse(xhr.responseText); } catch { /* empty */ }
       if (xhr.status === 201) {
+        if (data.replaced) st.me.documents = st.me.documents.filter((d) => d.id !== data.replaced);
         st.me.documents.push(data.document);
         renderDocuments(step);
         const heading = $(`#dc-${category}`);
-        const live = document.createElement('p'); live.className = 'visually-hidden'; live.setAttribute('role', 'status'); live.textContent = `${data.document.name} uploaded.`;
+        const live = document.createElement('p'); live.className = 'visually-hidden'; live.setAttribute('role', 'status'); live.textContent = `${data.document.name} ${data.replaced ? 'replaced the previous file' : 'uploaded'}.`;
         heading.after(live);
       } else { err.textContent = data.error || 'Upload failed. Please try again.'; err.hidden = false; }
     };
@@ -532,7 +590,8 @@ ${ICON.upload}<span><strong>${list.length ? 'Add another file' : 'Choose a file'
     if (f.type === 'checkboxes') return v.map((x) => optLabel(f.options.find((o) => optVal(o) === x) || x)).join(', ');
     if (f.type === 'checkbox') return v ? 'Yes' : 'No';
     if (f.type === 'money') return money(v);
-    if (f.type === 'date') return new Date(`${v}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (f.type === 'date') return auDate(v);
+    if (f.type === 'month') return auMonth(v);
     if (f.type === 'list') return v.map((it) => f.fields.map((sf) => it[sf.name]).filter(Boolean).join(' · ')).join('\n');
     return String(v);
   }
@@ -581,7 +640,7 @@ ${st.declarations.approved ? '' : `<p class="notice small">${ICON.lock}<span>The
 <p class="error" id="q-declarations-err" hidden></p></fieldset>
 <div class="field"><label for="q-signedName">Type your full name to sign</label><p class="help" id="q-signedName-help">Enter it exactly as: <strong>${esc(d.firstName)} ${esc(d.lastName)}</strong></p>
 <input id="q-signedName" name="signedName" autocomplete="off" aria-describedby="q-signedName-help q-signedName-err" class="signature"><p class="error" id="q-signedName-err" hidden></p></div>
-<p class="small muted">Signed ${new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}. We record the time you sign and the declaration version.</p>
+<p class="small muted">Signed ${auDate(today())}. We record the time you sign and the declaration version.</p>
 ${lead && waiting.length ? `<p class="notice small">${waiting.map((w) => esc(w.firstName)).join(', ')} still ${waiting.length === 1 ? 'needs' : 'need'} to finish. Your application will be submitted automatically once everyone has signed.</p>` : ''}
 ${!lead ? '<p class="notice small">Once you sign, your part is complete. The application is submitted when every applicant has signed.</p>' : ''}
 <div class="app-nav"><a class="btn btn-ghost" href="#step-review">${ICON.arrowL} Back</a><button class="btn btn-brand" type="submit">${lead && !waiting.length ? 'Sign and submit application' : 'Sign'}</button></div>
@@ -617,18 +676,21 @@ ${!lead ? '<p class="notice small">Once you sign, your part is complete. The app
     const statusCopy = {
       draft: 'Your application isn’t finished yet.',
       awaiting_applicants: 'You’ve signed. We’re waiting for the other applicants to finish and sign.',
-      submitted: 'Your application has been submitted. Applications usually take 36–48 hours to process.',
+      received: 'Your application has been submitted. Applications usually take 36–48 hours to process.',
       under_review: 'Your property manager is reviewing your application.',
+      presented_to_owner: 'Your property manager is reviewing your application.',
+      owner_decision: 'Your property manager is reviewing your application.',
       info_requested: 'Your property manager has asked for more information.',
       finalised: 'A decision has been made. We’ll have contacted you by email or phone.',
       withdrawn: 'This application has been withdrawn.',
     }[app.status];
     shell(`<div class="app-card">
 <p class="label">Application ${esc(app.ref)}</p>
-<h1 class="app-h1" tabindex="-1">${st.me.signed && app.status === 'awaiting_applicants' ? 'Thanks, you’ve signed' : app.status === 'submitted' ? 'Application submitted' : esc(app.statusLabel || 'Your application')}</h1>
+<h1 class="app-h1" tabindex="-1">${st.me.signed && app.status === 'awaiting_applicants' ? 'Thanks, you’ve signed' : app.status === 'received' ? 'Application submitted' : esc(app.statusLabel || 'Your application')}</h1>
 <p class="app-status-line"><span class="status-pill st-${esc(app.status)}">${esc(app.statusLabel)}</span></p>
 <p>${statusCopy}</p>
-${app.status === 'submitted' && !st.emailDelivered ? '<p class="notice small">Confirmation emails are switched off in this preview, so you won’t receive one.</p>' : ''}
+${app.status === 'received' ? `<p class="app-ref">Your reference number is <strong>${esc(app.ref)}</strong>.${app.submittedAt ? ` Submitted ${esc(new Date(app.submittedAt).toLocaleString('en-AU', { timeZone: 'Australia/Perth', day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }))}.` : ''}</p>` : ''}
+${app.status === 'received' && !st.emailDelivered ? '<p class="notice small">Confirmation emails are switched off in this preview, so you won’t receive one.</p>' : ''}
 ${open.length ? `<section class="app-requests"><h2 class="h4">Requested by your property manager</h2>${open.map((r) => `<blockquote>${esc(r.message).replace(/\n/g, '<br>')}</blockquote>`).join('')}
 <p>Update the relevant sections, then tell us you’re done.</p>
 <div class="actions"><a class="btn btn-ghost" href="#step-documents">Upload documents</a><a class="btn btn-ghost" href="#step-${steps()[0].id}">Edit my answers</a><button class="btn btn-dark" type="button" data-send-update>I’ve made the changes</button></div></section>` : ''}

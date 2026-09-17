@@ -68,7 +68,7 @@ async function api(method, url, body) {
     const d = st.me.data.details; const expected = `${d.firstName} ${d.lastName}`.toLowerCase().replace(/\s+/g, ' ');
     if (String(body.signedName || '').trim().toLowerCase().replace(/\s+/g, ' ') !== expected) return fail(422, { error: `Type your full name exactly as “${d.firstName} ${d.lastName}”.`, field: 'signedName' });
     st.me.signed = true; st.me.status = 'complete'; st.progress.declaration = true;
-    setStatus('submitted');
+    setStatus('received'); st.application.submittedAt = new Date().toISOString();
     return ok({ ok: true, submitted: true });
   }
   if (path === '/message') {
@@ -81,12 +81,13 @@ async function api(method, url, body) {
   return fail(404, { error: 'Not available in the demo.' });
 }
 
-async function upload(category, file) {
+async function upload(category, file, replaces = null) {
   await new Promise((r) => setTimeout(r, 400));
   const typeOk = /\.(pdf|jpe?g|png|heic)$/i.test(file.name) || ['application/pdf', 'image/jpeg', 'image/png', 'image/heic'].includes(file.type);
   if (!typeOk) return { status: 415, data: { error: 'That file type isn’t supported. Upload a PDF, JPG, PNG or HEIC file.' } };
   if (file.size > MAX) return { status: 413, data: { error: 'That file is larger than 10MB. Try a smaller photo or a compressed PDF.' } };
   const document = { id: uid(), category, name: file.name.slice(0, 120), mime: file.type, size: file.size };
+  if (replaces) st.me.documents = st.me.documents.filter((d) => d.id !== replaces);
   st.me.documents.push(document);
   return { status: 201, data: { ok: true, document } };
 }
