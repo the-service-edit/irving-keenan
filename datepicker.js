@@ -213,6 +213,9 @@
       const p = parts(focusDay);
       setView(p.y, p.m, true);
       place();
+      // If the field sits near the edge of the screen, bring the whole calendar into view.
+      const pr = pop.getBoundingClientRect();
+      if (pr.top < 0 || pr.bottom > window.innerHeight) pop.scrollIntoView({ block: 'nearest' });
       btn.setAttribute('aria-expanded', 'true');
       openPicker = api;
       pop.querySelector(`[data-day="${focusDay}"]`)?.focus();
